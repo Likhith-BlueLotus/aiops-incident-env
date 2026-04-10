@@ -6,7 +6,7 @@ colorTo: indigo
 sdk: docker
 app_port: 7860
 license: bsd-3-clause
-short_description: FinOps + Security + DDoS + SOC Analyst cloud ops for LLM agents
+short_description: CloudOps + SOC Analyst env for LLM agents
 tags:
   - reinforcement-learning
   - openenv
