@@ -2,11 +2,11 @@
 title: AIOps Incident Response Environment
 emoji: 🚨
 colorFrom: red
-colorTo: orange
+colorTo: red
 sdk: docker
 app_port: 7860
 license: bsd-3-clause
-short_description: On-call SRE environment — investigate logs, fix incidents, verify recovery
+short_description: On-call SRE — investigate logs, fix incidents
 tags:
   - reinforcement-learning
   - openenv
