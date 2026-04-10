@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Docker HEALTHCHECK probe for the AIOps Incident Response Environment.
+Docker HEALTHCHECK probe for the CloudOps Intelligence Environment.
 
 Performs two sequential checks:
   1. GET /health  — verifies the FastAPI process is alive and reports status=healthy.

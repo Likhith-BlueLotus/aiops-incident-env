@@ -1,5 +1,5 @@
 """
-Pydantic data contracts for the AIOps Incident Response Environment.
+Pydantic data contracts for the CloudOps Intelligence Environment.
 
 Three top-level schemas implement the OpenEnv typed interface:
   IncidentAction      — action taken by the on-call engineer agent

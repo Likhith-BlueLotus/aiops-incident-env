@@ -177,7 +177,7 @@ class TestGraderEndpoint:
 class TestMetadataEndpoint:
     def test_metadata_returns_name(self):
         data = client.get("/metadata").json()
-        assert "aiops" in data["name"].lower() or "incident" in data["name"].lower()
+        assert "cloudops" in data["name"].lower() or "cloud" in data["name"].lower()
 
     def test_metadata_includes_tasks(self):
         data = client.get("/metadata").json()

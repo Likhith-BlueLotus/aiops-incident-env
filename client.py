@@ -1,5 +1,5 @@
 """
-AIOps Incident Response — async OpenEnv client.
+CloudOps Intelligence — async OpenEnv client.
 
 Wraps the HTTP / WebSocket surface so external code does not need to
 construct raw requests.  Mirrors the openenv-core AsyncEnvClient interface.
@@ -26,7 +26,7 @@ from models import IncidentAction, IncidentObservation, IncidentState
 
 class IncidentResponseEnv:
     """
-    Async HTTP client for the AIOps Incident Response server.
+    Async HTTP client for the CloudOps Intelligence server.
 
     All public methods are coroutines and must be awaited.
 

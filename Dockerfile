@@ -1,19 +1,19 @@
 # =============================================================================
-# AIOps Incident Response Environment — production Dockerfile
+# CloudOps Intelligence Environment — production Dockerfile
 #
 # Build context : fire_swarm_simulator/  (repo root — this file)
 # Exposed port  : 7860  (HF Spaces standard)
 # Runtime user  : appuser (non-root, required by HF Spaces sandbox)
 #
 # Build:
-#   docker build -t aiops-incident .
+#   docker build -t cloudops-intelligence .
 #
 # Run:
 #   docker run -p 7860:7860 \
 #     -e API_BASE_URL=https://api.openai.com/v1 \
 #     -e MODEL_NAME=gpt-4o-mini               \
 #     -e HF_TOKEN=<your-api-key>              \
-#     aiops-incident
+#     cloudops-intelligence
 # =============================================================================
 
 FROM python:3.10-slim

@@ -10,7 +10,7 @@ short_description: FinOps + Security + DDoS cloud ops for LLM agents
 tags:
   - reinforcement-learning
   - openenv
-  - aiops
+  - cloudops
   - finops
   - cloud-security
   - sre
@@ -217,8 +217,8 @@ only completes it 18% of the time, leaving significant headroom for improved age
 ### Local (Python)
 
 ```bash
-git clone https://github.com/le0atis/aiops-incident-response
-cd aiops-incident-response
+git clone https://github.com/Likhith-BlueLotus/cloudops-intelligence
+cd cloudops-intelligence
 pip install -r requirements.txt
 
 # Start the environment server
@@ -243,7 +243,7 @@ docker run -p 7860:7860 \
 ### HF Spaces (live)
 
 ```
-https://le0atis-aiops-incident-response.hf.space
+https://le0atis-cloudops-intelligence.hf.space
 ```
 
 ---
@@ -266,7 +266,7 @@ https://le0atis-aiops-incident-response.hf.space
 ## Project Structure
 
 ```
-aiops_incident_env/
+cloudops-intelligence/
 ├── models.py                  # Pydantic types (Action, Observation, State)
 ├── client.py                  # Async HTTP client wrapper
 ├── inference.py               # GPT-4o-mini baseline agent
@@ -309,7 +309,7 @@ aiops_incident_env/
   author       = {le0atis},
   year         = {2026},
   howpublished = {Hugging Face Spaces},
-  url          = {https://huggingface.co/spaces/le0atis/aiops-incident-response},
+  url          = {https://huggingface.co/spaces/Le0AtiS/cloudops-intelligence},
   note         = {OpenEnv-compatible. Combines FinOps, Security, and SRE
                   incident response in a single text-based environment.}
 }

@@ -1,9 +1,9 @@
 """
-AIOps Incident Response Environment — Inference Script
+CloudOps Intelligence Environment — Inference Script
 =======================================================
 
 Runs one full episode per task (easy / medium / hard) against a live
-AIOps Incident Response server and reports per-task programmatic scores.
+CloudOps Intelligence server and reports per-task programmatic scores.
 
 Required environment variables (hackathon spec):
   API_BASE_URL   OpenAI-compatible LLM endpoint (default: https://api.openai.com/v1)
@@ -17,7 +17,7 @@ Usage:
   python inference.py
 
 Stdout format (strictly follows the hackathon-required [START]/[STEP]/[END] spec):
-  [START] task=<name> env=aiops-incident-response model=<model>
+  [START] task=<name> env=cloudops-intelligence model=<model>
   [STEP]  step=<n> action=<json> reward=<float> done=<true|false> error=<msg|null>
   [END]   success=<true|false> steps=<n> score=<float> rewards=<r1,r2,...>
 
@@ -332,7 +332,7 @@ def run_episode(task: str) -> dict:
     steps: int = 0
     error_msg: Optional[str] = None
 
-    print(f"[START] task={task} env=aiops-incident-response model={MODEL_NAME}", flush=True)
+    print(f"[START] task={task} env=cloudops-intelligence model={MODEL_NAME}", flush=True)
     log.info("=" * 60)
     log.info("TASK: %s  (max_steps=%d)", task.upper(), max_steps)
     log.info("=" * 60)

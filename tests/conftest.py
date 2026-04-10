@@ -1,4 +1,4 @@
-"""pytest configuration for AIOps Incident Response tests."""
+"""pytest configuration for CloudOps Intelligence tests."""
 import sys
 import os
 

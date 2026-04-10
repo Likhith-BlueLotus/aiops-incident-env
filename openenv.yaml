@@ -7,7 +7,7 @@ name:        cloudops-intelligence
 version:     "0.2.0"
 description: >
   CloudOps Intelligence — a multi-step cloud operations environment combining
-  FinOps cost optimisation, cloud security remediation, and AIOps incident
+  FinOps cost optimisation, cloud security remediation, and CloudOps intelligence
   response into three progressively harder real-world tasks.
 
   Every task simulates a scenario that Cloud/SRE teams encounter daily:

@@ -1,5 +1,5 @@
 """
-AIOps Incident Response Environment — FastAPI server.
+CloudOps Intelligence Environment — FastAPI server.
 
 Exposes the OpenEnv-standard HTTP + WebSocket surface:
   POST /reset         start a new episode
@@ -63,7 +63,7 @@ async def _lifespan(application: FastAPI):
     global _SERVER_START_TIME
     _SERVER_START_TIME = time.time()
     print("=" * 60)
-    print("AIOps Incident Response Environment — server ready")
+    print("CloudOps Intelligence Environment — server ready")
     print(f"  Endpoints: /reset /step /state /ws /health /tasks /grade")
     print(f"  Max concurrent sessions: {_concurrency.max_concurrent_envs}")
     print(f"  Session timeout: {_concurrency.session_timeout}s")
@@ -89,7 +89,7 @@ async def health() -> JSONResponse:
         "status":         "healthy",
         "uptime_seconds": round(time.time() - _SERVER_START_TIME, 2),
         "environment": {
-            "name":                    "aiops-incident-response",
+            "name":                    "cloudops-intelligence",
             "version":                 app.version,
             "tasks":                   ["easy", "medium", "hard"],
             "max_concurrent_sessions": _concurrency.max_concurrent_envs,
@@ -102,7 +102,7 @@ async def health() -> JSONResponse:
 @app.get("/metadata", summary="Environment metadata", tags=["Operations"])
 async def get_metadata() -> JSONResponse:
     return JSONResponse(content={
-        "name": "AIOps Incident Response Environment",
+        "name": "CloudOps Intelligence Environment",
         "description": (
             "A multi-step on-call engineering environment where an AI agent acts as a "
             "senior on-call engineer responding to production incidents. The agent reads "
@@ -116,7 +116,7 @@ async def get_metadata() -> JSONResponse:
         "version":           app.version,
         "tasks":             ["easy", "medium", "hard"],
         "reward_range":      [0.0, 1.0],
-        "tags":              ["aiops", "incident-response", "sre", "devops", "openenv"],
+        "tags":              ["cloudops", "finops", "cloud-security", "sre", "devops", "openenv"],
     }, status_code=200)
 
 

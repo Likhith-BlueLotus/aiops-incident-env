@@ -1,4 +1,4 @@
-"""AIOps Incident Response Environment — public API surface."""
+"""CloudOps Intelligence Environment — public API surface."""
 
 try:
     from .client import IncidentResponseEnv

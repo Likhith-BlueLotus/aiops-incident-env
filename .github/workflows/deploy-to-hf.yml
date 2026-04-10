@@ -20,7 +20,7 @@ jobs:
         run: |
           if [ -z "$HF_TOKEN" ]; then
             echo "ERROR: HF_TOKEN secret is not set in GitHub repository secrets."
-            echo "Go to: https://github.com/Likhith-BlueLotus/aiops-incident-env/settings/secrets/actions"
+            echo "Go to: https://github.com/Likhith-BlueLotus/cloudops-intelligence/settings/secrets/actions"
             exit 1
           fi
           echo "HF_TOKEN is set."
@@ -33,5 +33,5 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git remote add space https://Le0AtiS:${HF_TOKEN}@huggingface.co/spaces/Le0AtiS/aiops-incident-response
+          git remote add space https://Le0AtiS:${HF_TOKEN}@huggingface.co/spaces/Le0AtiS/cloudops-intelligence
           git push space main --force
