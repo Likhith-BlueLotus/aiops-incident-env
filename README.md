@@ -290,12 +290,17 @@ score = 0.35 × (root_causes_found / total_root_causes)
 | easy | FinOps | 1 | **0.8533** | 3 | 15 | ✅ |
 | medium | Security+SRE | 2 | **0.8933** | 3 | 25 | ✅ |
 | hard | DDoS+FinOps+SRE | 3 | **0.9000** | 4 | 40 | ✅ |
+| soc_easy | SecOps (brute-force) | 1 | **0.8567** | 3 | 15 | ✅ |
+| soc_medium | SecOps (C2+cred dump) | 2 | **0.8725** | 4 | 25 | ✅ |
+| soc_hard | SecOps (APT) | 3 | **0.8820** | 5 | 40 | ✅ |
 
-**Overall mean: 0.8822** (gpt-4o-mini, seed=42, single episode, no few-shot examples)
+**Overall mean: 0.8763** (gpt-4o-mini, seed=42, single episode, no few-shot examples)
 
-All three tasks are solved completely with `rc=n/n` and `svc=healthy/total`, using
-7–10% of the available step budget. The scoring formula rewards both correctness and
-efficiency, creating genuine headroom for stronger reasoning models to score higher.
+All six tasks are solved completely with `rc=n/n` and `svc=healthy/total`, using
+7–13% of the available step budget. SOC tasks use real Feodo Tracker C2 IPs
+(`50.16.16.211` QakBot ONLINE, `162.243.103.246` Emotet OFFLINE) and MITRE ATT&CK
+technique annotations. The scoring formula rewards both correctness and efficiency,
+creating genuine headroom for stronger reasoning models to score higher.
 
 ---
 
