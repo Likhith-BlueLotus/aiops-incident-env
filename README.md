@@ -1,5 +1,6 @@
 ---
-title: CloudOps Intelligence Environment
+
+## title: CloudOps Intelligence Environment
 emoji: ☁️
 colorFrom: blue
 colorTo: indigo
@@ -21,7 +22,6 @@ tags:
   - terraform
   - threat-intel
   - aws
----
 
 # CloudOps Intelligence Environment
 
@@ -30,9 +30,9 @@ tags:
 > SOC Analyst track: alert triage, malware containment, and APT multi-stage response.
 > Six tasks, real threat intelligence (Feodo Tracker, Spamhaus DROP, MITRE ATT&CK).
 
-[![OpenEnv Spec Compliant](https://img.shields.io/badge/OpenEnv-≥0.2.2-blue)](https://github.com/openenv/openenv)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-40%20passing-brightgreen)](#testing)
+[OpenEnv Spec Compliant](https://github.com/openenv/openenv)
+[Python 3.10+](https://python.org)
+[Tests](#testing)
 
 ---
 
@@ -40,14 +40,16 @@ tags:
 
 Real-world cloud operations teams deal with two distinct problem classes **every day**:
 
-| Domain | Challenge | Real impact | This environment |
-|--------|-----------|-------------|------------------|
-| **CloudOps / FinOps** | Idle cloud resources | $28B/year waste (Flexera 2024) | Zombie EC2 fleet burning $12k/month |
-| **CloudOps / Security** | Cloud misconfiguration | 82% of breaches (IBM X-Force) | S3 public exposure + IAM typo |
-| **CloudOps / DDoS** | Live attack + runaway cost | $50k/hr average DDoS impact | DDoS + auto-scaling at $51k/hr |
-| **SOC / Alert triage** | Account compromise | 80% of attacks use stolen credentials | Brute-force SSH → active session |
-| **SOC / Malware** | C2 beacon + credential dump | QakBot pre-cursor to ransomware | Feodo C2 + LSASS dump (8 accounts) |
-| **SOC / APT** | Multi-stage threat | Avg. 207 days to detect (IBM) | C2 + lateral movement + 2.3 GB exfil |
+
+| Domain                  | Challenge                   | Real impact                           | This environment                     |
+| ----------------------- | --------------------------- | ------------------------------------- | ------------------------------------ |
+| **CloudOps / FinOps**   | Idle cloud resources        | $28B/year waste (Flexera 2024)        | Zombie EC2 fleet burning $12k/month  |
+| **CloudOps / Security** | Cloud misconfiguration      | 82% of breaches (IBM X-Force)         | S3 public exposure + IAM typo        |
+| **CloudOps / DDoS**     | Live attack + runaway cost  | $50k/hr average DDoS impact           | DDoS + auto-scaling at $51k/hr       |
+| **SOC / Alert triage**  | Account compromise          | 80% of attacks use stolen credentials | Brute-force SSH → active session     |
+| **SOC / Malware**       | C2 beacon + credential dump | QakBot pre-cursor to ransomware       | Feodo C2 + LSASS dump (8 accounts)   |
+| **SOC / APT**           | Multi-stage threat          | Avg. 207 days to detect (IBM)         | C2 + lateral movement + 2.3 GB exfil |
+
 
 Existing benchmarks (SWE-bench, WebArena, OSWorld) test coding or web navigation.
 **No existing benchmark tests a cloud operations + SOC agent** that must reason across
@@ -66,6 +68,7 @@ Three `m5.2xlarge` instances from a cancelled project ("ProjectPhoenix") have
 been running with 0% CPU for 32 days, burning $885/month.
 
 **Investigation path**:
+
 ```
 view_billing(ec2, month)           → See $9,600 EC2 spike
 list_resources(ec2) / run_cli(     → Find 3 zombie instances
@@ -82,13 +85,15 @@ verify(ec2_fleet)                  → Confirm fleet healthy
 ### Medium — Security + SRE: S3 Exposure + IAM Typo
 
 **Scenario**: A bad deployment (v4.2.0) triggered two simultaneous issues:
+
 1. S3 bucket `prod-customer-data` ACL set to `public-read-write` — customer PII
-   exposed to the public internet; GDPR breach window open 3 hours.
+  exposed to the public internet; GDPR breach window open 3 hours.
 2. Payment service IAM role policy has a typo (`s3:GetObejct` instead of
-   `s3:GetObject`) — AWS silently ignores the invalid action, causing all
+  `s3:GetObject`) — AWS silently ignores the invalid action, causing all
    payment cert loads to fail with 403; **89% checkout error rate**.
 
 **Investigation path**:
+
 ```
 view_logs(payment_service)         → See S3 403 errors
 run_cli(aws s3api get-bucket-acl   → Find public-read-write ACL
@@ -114,8 +119,9 @@ launching 200 extra EC2 instances — current cost **$51,200/hr** with
 and `inventory_service` degrades.
 
 **Three root causes**:
+
 1. **No WAF Web ACL** — must write and deploy Terraform:
-   ```hcl
+  ```hcl
    resource "aws_wafv2_ip_set" "block_ips" {
      ip_address_version = "IPV4"
      addresses = ["203.0.113.0/24", "198.51.100.0/24", "192.0.2.0/24"]
@@ -123,11 +129,12 @@ and `inventory_service` degrades.
    resource "aws_wafv2_web_acl" "main" {
      rule { action { block {} } }
    }
-   ```
+  ```
 2. **Auto-scaling `max_capacity=500`** with no DDoS protection — must cap and scale in.
 3. **No API Gateway rate limiting** — must enable throttling.
 
 **Investigation path**:
+
 ```
 view_logs(api_gateway)             → See 840k req/min flood
 run_cli(aws vpc get-flow-logs)     → Find attack CIDRs:
@@ -157,6 +164,7 @@ verify(api_gateway)                → Confirm attack mitigated
 The attacker is running `sudo` commands and attempting to download an implant.
 
 **Investigation path**:
+
 ```
 lookup_threat_intel(185.220.101.45)   → Confirm: Tor exit node, abuse score 97/100
 view_logs(bastion_host)               → Find active session + attacker commands
@@ -172,11 +180,13 @@ verify(bastion_host)                  → Confirm clean
 ### SOC Medium — QakBot C2 + LSASS Credential Dump
 
 **Scenario**: SIEM alert SOC-3991 — three correlated rules:
+
 1. QakBot C2 beacon from `ENG-WORKSTATION-47` to `162.243.103.246:8080` (Feodo Tracker, ONLINE)
 2. LSASS memory access — 8 account NTLM hashes dumped (MITRE T1003.001)
 3. SMB lateral movement probe across `10.0.2.0/24`
 
 **Investigation path**:
+
 ```
 lookup_threat_intel(162.243.103.246)  → Confirm: QakBot C2, Feodo Tracker
 view_logs(endpoint_security)          → Find infected host + C2 connection
@@ -194,6 +204,7 @@ verify(endpoint_security)             → Confirm C2 severed
 ### SOC Hard — APT: C2 + Lateral Movement + S3 Data Exfiltration
 
 **Scenario**: SIEM alert SOC-4128 — five correlated GuardDuty/IDS findings:
+
 1. Active QakBot C2 from `PROD-SRV-12` → `50.16.16.211:443` (ONLINE, Feodo Tracker, 6h+ beacon)
 2. WMI/SMB lateral movement from `PROD-SRV-12` → `PROD-SRV-07`, `PROD-SRV-09`, `DB-PRIMARY` (MITRE T1021)
 3. `DataScienceRole` credential theft + 1,847 S3 GetObject calls = 2.3 GB exfiltrated (MITRE T1530)
@@ -201,6 +212,7 @@ verify(endpoint_security)             → Confirm C2 severed
 5. GuardDuty finding: `UnauthorizedAccess:IAMUser/TorIPCaller`
 
 **Investigation path**:
+
 ```
 view_logs(endpoint_security)          → EDR: PROD-SRV-12 → 50.16.16.211:443 beacon,
                                         WMI lateral movement to PROD-SRV-07/09/DB-PRIMARY
@@ -223,18 +235,20 @@ verify(s3_data_lake)                  → Confirm C2 severed + exfiltration stop
 
 All actions are text-based JSON objects — no spatial grids, no physics.
 
-| Action | Description | Example |
-|--------|-------------|---------|
-| `view_logs` | Service log output | `{"action_type": "view_logs", "target": "bastion_host"}` |
-| `view_metrics` | Time-series data | `{"action_type": "view_metrics", "target": "api_gateway", "parameters": {"metric": "request_rate"}}` |
-| `list_resources` | AWS resource inventory | `{"action_type": "list_resources", "parameters": {"type": "ec2"}}` |
-| `run_cli` | AWS CLI / system command | `{"action_type": "run_cli", "parameters": {"command": "aws guardduty list-findings"}}` |
-| `view_billing` | Cost and usage reports | `{"action_type": "view_billing", "target": "ec2", "parameters": {"period": "month"}}` |
-| `lookup_threat_intel` | Query Feodo/Spamhaus/AbuseIPDB feeds | `{"action_type": "lookup_threat_intel", "parameters": {"ioc": "50.16.16.211", "ioc_type": "ip"}}` |
-| `apply_fix` | Apply remediation | `{"action_type": "apply_fix", "target": "endpoint_security", "parameters": {"fix_type": "isolate_host", "config_key": "ENG-WORKSTATION-47"}}` |
-| `write_terraform` | Generate + validate Terraform | `{"action_type": "write_terraform", "parameters": {"resource_type": "aws_network_acl", "config": "cidr=50.16.16.211/32 rule=DENY"}}` |
-| `verify` | Health / security check | `{"action_type": "verify", "target": "network_ids"}` |
-| `escalate` | Hand off (partial credit) | `{"action_type": "escalate"}` |
+
+| Action                | Description                          | Example                                                                                                                                       |
+| --------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `view_logs`           | Service log output                   | `{"action_type": "view_logs", "target": "bastion_host"}`                                                                                      |
+| `view_metrics`        | Time-series data                     | `{"action_type": "view_metrics", "target": "api_gateway", "parameters": {"metric": "request_rate"}}`                                          |
+| `list_resources`      | AWS resource inventory               | `{"action_type": "list_resources", "parameters": {"type": "ec2"}}`                                                                            |
+| `run_cli`             | AWS CLI / system command             | `{"action_type": "run_cli", "parameters": {"command": "aws guardduty list-findings"}}`                                                        |
+| `view_billing`        | Cost and usage reports               | `{"action_type": "view_billing", "target": "ec2", "parameters": {"period": "month"}}`                                                         |
+| `lookup_threat_intel` | Query Feodo/Spamhaus/AbuseIPDB feeds | `{"action_type": "lookup_threat_intel", "parameters": {"ioc": "50.16.16.211", "ioc_type": "ip"}}`                                             |
+| `apply_fix`           | Apply remediation                    | `{"action_type": "apply_fix", "target": "endpoint_security", "parameters": {"fix_type": "isolate_host", "config_key": "ENG-WORKSTATION-47"}}` |
+| `write_terraform`     | Generate + validate Terraform        | `{"action_type": "write_terraform", "parameters": {"resource_type": "aws_network_acl", "config": "cidr=50.16.16.211/32 rule=DENY"}}`          |
+| `verify`              | Health / security check              | `{"action_type": "verify", "target": "network_ids"}`                                                                                          |
+| `escalate`            | Hand off (partial credit)            | `{"action_type": "escalate"}`                                                                                                                 |
+
 
 **CloudOps `fix_type` options**: `terminate`, `block_public_access`, `fix_iam`, `adjust_config`, `enable_rate_limiting`
 
@@ -281,6 +295,7 @@ Penalties accumulate in cumulative_reward only (for grading).
 incentivises proper diagnostic investigation before applying fixes.
 
 **Grading formula** (consistent across all tasks):
+
 ```
 score = 0.35 × (root_causes_found / total_root_causes)
       + 0.25 × (services_healthy / total_services)
@@ -292,16 +307,17 @@ score = 0.35 × (root_causes_found / total_root_causes)
 
 ## Baseline Scores (gpt-4o-mini)
 
-| Task | Domain | Root causes | Score | Steps used | Step budget | Success |
-|------|--------|------------|-------|-----------|-------------|---------|
-| easy | FinOps | 1 | **0.8293** | 6 | 15 | ✅ |
-| medium | Security+SRE | 2 | **0.8740** | 4 | 25 | ✅ |
-| hard | DDoS+FinOps+SRE | 3 | **0.8462** | 10 | 40 | ✅ |
-| soc_easy | SecOps (brute-force) | 1 | **0.8587** | 3 | 15 | ✅ |
-| soc_medium | SecOps (C2+cred dump) | 2 | **0.8423** | 7 | 25 | ✅ |
-| soc_hard | SecOps (APT) | 3 | **0.8693** | 6 | 40 | ✅ |
 
-**Primary mean (easy/medium/hard): 0.8498** | **Overall mean (all 6 tasks): 0.8533**
+| Task       | Domain                | Root causes | Score      | Steps used | Step budget | Success |
+| ---------- | --------------------- | ----------- | ---------- | ---------- | ----------- | ------- |
+| easy       | FinOps                | 1           | **0.8440** | 4          | 15          | ✅       |
+| medium     | Security+SRE          | 2           | **0.8740** | 4          | 25          | ✅       |
+| hard       | DDoS+FinOps+SRE       | 3           | **0.8320** | 13         | 40          | ✅       |
+| soc_easy   | SecOps (brute-force)  | 1           | **0.8587** | 3          | 15          | ✅       |
+| soc_medium | SecOps (C2+cred dump) | 2           | **0.8740** | 4          | 25          | ✅       |
+| soc_hard   | SecOps (APT)          | 3           | **0.8693** | 6          | 40          | ✅       |
+
+**Primary mean (easy/medium/hard): 0.8500** | **Overall mean (all 6 tasks): 0.8587**
 *(gpt-4o-mini, single episode per task, investigation-first flow)*
 
 **All 6 tasks complete successfully** — scores are meaningfully differentiated by task difficulty,
@@ -381,16 +397,18 @@ Sessions expire after **5 minutes of inactivity**. Call `/reset` to start a new 
 
 ### Endpoint summary
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Environment health + uptime |
-| `/metadata` | GET | Environment metadata (name, version, tasks) |
-| `/schema` | GET | Action/observation JSON schemas |
-| `/tasks` | GET | All task definitions with metadata |
-| `/reset` | POST | Start new episode → returns `session_id` |
-| `/step` | POST | Take an action (requires `session_id`) |
-| `/state` | GET | Current episode state (requires `?session_id=`) |
-| `/grade/{task}` | POST | Programmatic grader (episode stats → score) |
+
+| Endpoint        | Method | Description                                     |
+| --------------- | ------ | ----------------------------------------------- |
+| `/health`       | GET    | Environment health + uptime                     |
+| `/metadata`     | GET    | Environment metadata (name, version, tasks)     |
+| `/schema`       | GET    | Action/observation JSON schemas                 |
+| `/tasks`        | GET    | All task definitions with metadata              |
+| `/reset`        | POST   | Start new episode → returns `session_id`        |
+| `/step`         | POST   | Take an action (requires `session_id`)          |
+| `/state`        | GET    | Current episode state (requires `?session_id=`) |
+| `/grade/{task}` | POST   | Programmatic grader (episode stats → score)     |
+
 
 ---
 
@@ -422,15 +440,15 @@ cloudops-intelligence/
 
 ## OpenEnv Compliance Checklist
 
-- [x] `models.py`: `Action`, `Observation`, `State` inherit from OpenEnv base classes
-- [x] `client.py`: `reset()`, `step()`, `state` async interface
-- [x] `server/environment.py`: `reset()`, `step()`, `state` property
-- [x] `openenv.yaml`: spec_version, name, version, description, tasks
-- [x] Rewards normalised to `[0.0, 1.0]` in observations
-- [x] Programmatic grader at `/grade/{task}`
-- [x] `≥ 3 tasks` with easy → medium → hard progression
-- [x] Docker + HF Spaces deployment
-- [x] 103 automated tests
+- `models.py`: `Action`, `Observation`, `State` inherit from OpenEnv base classes
+- `client.py`: `reset()`, `step()`, `state` async interface
+- `server/environment.py`: `reset()`, `step()`, `state` property
+- `openenv.yaml`: spec_version, name, version, description, tasks
+- Rewards normalised to `[0.0, 1.0]` in observations
+- Programmatic grader at `/grade/{task}`
+- `≥ 3 tasks` with easy → medium → hard progression
+- Docker + HF Spaces deployment
+- 103 automated tests
 
 ---
 
@@ -448,3 +466,4 @@ cloudops-intelligence/
                   incident response in a single text-based environment.}
 }
 ```
+
