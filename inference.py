@@ -281,19 +281,56 @@ _VALID_ACTION_TYPES = {
     "write_terraform", "verify", "escalate",
 }
 
+# LLMs frequently emit a fix_type directly as the action_type, e.g.
+# {"action_type": "revoke_session", "target": "bastion_host"}
+# instead of the correct:
+# {"action_type": "apply_fix", "target": "bastion_host",
+#  "parameters": {"fix_type": "revoke_session"}}
+# Translating these avoids a wasted no-op step.
+_FIX_TYPE_AS_ACTION: set = {
+    # SOC fix types
+    "revoke_session", "revoke_credentials", "revoke_access",
+    "isolate_host", "quarantine", "block_ip",
+    # CloudOps fix types
+    "terminate", "block_public_access", "fix_iam",
+    "adjust_config", "enable_rate_limiting", "update_policy",
+}
+
 
 def _sanitize_action(action: dict) -> dict:
     """Ensure action has a valid action_type and all parameter values are strings.
 
     LLMs sometimes:
-    - Use an invalid action_type variant (e.g. 'view_log' instead of 'view_logs')
+    - Use a fix_type directly as action_type — translated to apply_fix so the
+      step still executes rather than wasting a turn on a no-op view_logs.
+    - Use an invalid action_type variant — falls back to view_logs.
     - Include integer/boolean values in parameters (port numbers, abuse scores)
       which would cause a Pydantic 422 on Dict[str, str] validation.
     """
-    if action.get("action_type") not in _VALID_ACTION_TYPES:
+    action_type = action.get("action_type", "")
+
+    # Translate fix_type-as-action_type → apply_fix
+    if action_type in _FIX_TYPE_AS_ACTION:
+        log.warning(
+            "fix_type %r used as action_type — translating to apply_fix",
+            action_type,
+        )
+        params = action.get("parameters") or {}
+        if isinstance(params, dict):
+            params = {str(k): str(v) for k, v in params.items()}
+        else:
+            params = {}
+        params.setdefault("fix_type", action_type)
+        return {
+            "action_type": "apply_fix",
+            "target": action.get("target", ""),
+            "parameters": params,
+        }
+
+    if action_type not in _VALID_ACTION_TYPES:
         log.warning(
             "Invalid action_type %r — falling back to view_logs",
-            action.get("action_type"),
+            action_type,
         )
         return {"action_type": "view_logs", "target": action.get("target", "")}
 
