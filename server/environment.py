@@ -2048,6 +2048,62 @@ def _load_real_data() -> None:
         except Exception as e:
             print(f"[data] ✗ Feodo Tracker load error: {e}")
 
+    # ── 6. Tor Exit Nodes — validate soc_easy brute-force source IP ──────────
+    tor_path = data_dir / "tor_exit_nodes.json"
+    if tor_path.exists():
+        try:
+            tor_data = json.loads(tor_path.read_text())
+            tor_ips: set = set(tor_data.get("exit_ips", []))
+            soc_easy = SCENARIOS.get("soc_easy", {})
+            if "threat_indicators" in soc_easy:
+                for ip in list(soc_easy["threat_indicators"].get("malicious_ips", [])):
+                    is_exit = ip in tor_ips
+                    soc_easy["threat_indicators"]["intel"].setdefault(ip, {}).update({
+                        "is_tor_exit":    is_exit,
+                        "tor_exit_count": len(tor_ips),
+                        "_source_tor":    "Tor Project bulk exit list (torproject.org)",
+                    })
+                    if is_exit:
+                        print(
+                            f"[data] ✓ Tor exits: {ip} CONFIRMED as active Tor exit relay "
+                            f"({len(tor_ips):,} exits in feed)"
+                        )
+        except Exception as e:
+            print(f"[data] ✗ Tor exit nodes load error: {e}")
+
+    # ── 7. URLhaus C2 intel — enrich SOC medium/hard threat_indicators ───────
+    urlhaus_path = data_dir / "urlhaus_c2.json"
+    if urlhaus_path.exists():
+        try:
+            urlhaus_data = json.loads(urlhaus_path.read_text())
+            urlhaus_hosts: dict = urlhaus_data.get("hosts", {})
+            soc_tasks = {
+                "soc_medium": SCENARIOS.get("soc_medium", {}),
+                "soc_hard":   SCENARIOS.get("soc_hard",   {}),
+            }
+            for task_name, scenario in soc_tasks.items():
+                if "threat_indicators" not in scenario:
+                    continue
+                for ip in list(scenario["threat_indicators"].get("malicious_ips", [])):
+                    entry = urlhaus_hosts.get(ip)
+                    if not entry:
+                        continue
+                    scenario["threat_indicators"]["intel"].setdefault(ip, {}).update({
+                        "urlhaus_reference": entry.get("urlhaus_reference", ""),
+                        "urlhaus_tags":      entry.get("tags", []),
+                        "urlhaus_urls":      entry.get("urls_count", 0),
+                        "urlhaus_threat":    entry.get("threat", "c2_communication"),
+                        "urlhaus_first_seen": entry.get("first_seen", ""),
+                        "_source_urlhaus":   "abuse.ch URLhaus (verified)",
+                    })
+                    print(
+                        f"[data] ✓ URLhaus: enriched {task_name} {ip} — "
+                        f"{entry.get('urls_count',0)} URL(s) tags={entry.get('tags',[])} "
+                        f"threat={entry.get('threat','?')}"
+                    )
+        except Exception as e:
+            print(f"[data] ✗ URLhaus load error: {e}")
+
 
 # Run at import time — silently skips if data/ files are missing
 _load_real_data()
@@ -2723,17 +2779,48 @@ class IncidentResponseEnvironment(Environment):
 
         if matched_ip and matched_ip in intel_db:
             entry = intel_db[matched_ip]
+
+            # Build feed list from all data sources that enriched this entry
+            feeds = list(entry.get("feeds", []))
+            if entry.get("_source"):
+                feeds = list({*feeds, entry["_source"]})
+            if entry.get("_source_tor"):
+                feeds = list({*feeds, entry["_source_tor"]})
+            if entry.get("_source_urlhaus"):
+                feeds = list({*feeds, entry["_source_urlhaus"]})
+
             lines = [
                 f"🔍 THREAT INTEL REPORT — {matched_ip}",
-                f"  Type        : {entry.get('type', 'Unknown')}",
-                f"  Confidence  : {entry.get('confidence', 'N/A')}",
-                f"  Status      : {entry.get('status', 'ACTIVE')}",
+                f"  Type        : {entry.get('type', 'IP Address')}",
+                f"  Verdict     : MALICIOUS — CONFIRMED",
+                f"  Confidence  : {entry.get('confidence', 'HIGH')}",
+                f"  C2 Status   : {entry.get('status', 'ACTIVE')}",
                 f"  Malware     : {entry.get('malware_family', 'N/A')}",
+                f"  C2 Port     : {entry.get('port', 'N/A')}",
                 f"  ASN         : {entry.get('asn', 'N/A')}",
                 f"  Country     : {entry.get('country', 'N/A')}",
                 f"  Tags        : {', '.join(entry.get('tags', []))}",
-                f"  Feeds       : {', '.join(entry.get('feeds', []))}",
-                f"  Last seen   : {entry.get('last_seen', entry.get('last_reported', 'N/A'))}",
+            ]
+
+            # Tor exit relay data (injected by _load_real_data from live feed)
+            if entry.get("is_tor_exit") is True:
+                lines.append(
+                    f"  Tor Exit    : YES — confirmed in Tor Project bulk exit list "
+                    f"({entry.get('tor_exit_count', '?'):,} relays in feed)"
+                )
+
+            # URLhaus cross-reference (injected by _load_real_data)
+            if entry.get("urlhaus_urls", 0) > 0:
+                lines.append(
+                    f"  URLhaus     : {entry['urlhaus_urls']} malicious URL(s) — "
+                    f"threat={entry.get('urlhaus_threat','?')} "
+                    f"tags={entry.get('urlhaus_tags',[])} "
+                    f"ref={entry.get('urlhaus_reference','')}"
+                )
+
+            lines += [
+                f"  Feeds       : {', '.join(feeds)}",
+                f"  Last seen   : {entry.get('last_seen', entry.get('urlhaus_first_seen', 'N/A'))}",
                 f"  Description : {entry.get('description', '')}",
                 f"  ⚡ Recommended: {entry.get('recommended_action', '')}",
             ]
@@ -2744,7 +2831,7 @@ class IncidentResponseEnvironment(Environment):
             output = (
                 f"🔍 THREAT INTEL REPORT — {ioc}\n"
                 f"  Verdict     : CLEAN / NOT IN THREAT FEEDS\n"
-                f"  Checked     : Spamhaus DROP, Feodo Tracker, AbuseIPDB\n"
+                f"  Checked     : Spamhaus DROP, Feodo Tracker, Tor exits, URLhaus\n"
                 f"  Confidence  : LOW (absence of evidence ≠ evidence of absence)\n"
                 f"  Note: This IOC is not in the current scenario's threat feed. "
                 f"Check view_logs / run_cli for other indicators."

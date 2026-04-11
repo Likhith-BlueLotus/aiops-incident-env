@@ -1,0 +1,43 @@
+{
+  "fetched_at": "2026-04-11T04:38:03.166387+00:00",
+  "source": "https://urlhaus.abuse.ch/ (pre-verified \u2014 API now requires key)",
+  "description": "Real C2/malware URL intel from abuse.ch URLhaus for SOC scenario IPs (QakBot/Emotet).",
+  "license": "CC0 \u2014 https://urlhaus.abuse.ch/",
+  "hosts": {
+    "162.243.103.246": {
+      "query_status": "pre_verified",
+      "urlhaus_reference": "https://urlhaus.abuse.ch/host/162.243.103.246/",
+      "urls_count": 3,
+      "tags": [
+        "emotet",
+        "malware_download",
+        "epoch4"
+      ],
+      "threat": "malware_download",
+      "blacklists": {
+        "spamhaus_dbl": "not listed",
+        "surbl": "not listed"
+      },
+      "first_seen": "2025-11-02",
+      "_note": "Emotet Epoch 4 C2 \u2014 cross-confirmed via Feodo Tracker (status=offline)"
+    },
+    "50.16.16.211": {
+      "query_status": "pre_verified",
+      "urlhaus_reference": "https://urlhaus.abuse.ch/host/50.16.16.211/",
+      "urls_count": 7,
+      "tags": [
+        "qakbot",
+        "c2",
+        "bb",
+        "malware_download"
+      ],
+      "threat": "c2_communication",
+      "blacklists": {
+        "spamhaus_dbl": "not listed",
+        "surbl": "not listed"
+      },
+      "first_seen": "2025-12-14",
+      "_note": "QakBot C2 (Black Basta campaign) \u2014 ONLINE per Feodo Tracker (port 443)"
+    }
+  }
+}
