@@ -7,9 +7,9 @@ Three top-level schemas implement the OpenEnv typed interface:
   IncidentState       — server-side ground truth for graders and loggers
 """
 
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from openenv.core.env_server import Action, Observation, State
 
 # All legal action types across both CloudOps and SOC Analyst tracks.
@@ -59,7 +59,7 @@ class IncidentAction(Action):
             "Required for view_logs, view_metrics, and apply_fix."
         ),
     )
-    parameters: Optional[Dict[str, str]] = Field(
+    parameters: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         description=(
             "Additional parameters depending on action_type:\n"
@@ -77,6 +77,22 @@ class IncidentAction(Action):
             "  write_terraform:     {'resource_type': 'aws_wafv2_web_acl|aws_network_acl', 'config': '<hcl>'}"
         ),
     )
+
+    @field_validator("parameters", mode="before")
+    @classmethod
+    def coerce_params_to_str(cls, v: Any) -> Optional[Dict[str, str]]:
+        """Coerce all parameter values to strings to prevent 422 validation failures.
+
+        LLMs sometimes emit integer/boolean values in parameter dicts (e.g., port
+        numbers from log output). Pydantic would reject Dict[str,str] with those,
+        causing an HTTP 422. This validator converts every value to its string
+        representation before validation.
+        """
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return {str(k): str(val) for k, val in v.items()}
+        return v
 
 
 class ServiceHealth(BaseModel):

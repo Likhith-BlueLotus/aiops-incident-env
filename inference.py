@@ -145,7 +145,12 @@ SOC:      view_logs(siem/endpoint) + lookup_threat_intel(suspicious_ip) → see 
 IMPORTANT: The status report shows "EVIDENCE FOUND" ONLY after you investigate relevant services.
 Start by investigating the degraded/down services listed in the status report.
 
-Respond with ONLY a valid JSON object like: {"action_type": "view_logs", "target": "api_gateway"}"""
+JSON FORMAT RULES — strictly enforce these to avoid validation errors:
+- ALL parameter values MUST be strings (never integers, booleans, or nested objects).
+  CORRECT: {"parameters": {"port": "22", "abuse_score": "97"}}
+  WRONG:   {"parameters": {"port": 22, "abuse_score": 97}}
+- Use only the action_types listed above — never invent custom action names.
+- Respond with ONLY a single valid JSON object. No prose, no explanation."""
 
 # ---------------------------------------------------------------------------
 # HTTP helpers (direct HTTP to avoid asyncio complexity)
@@ -270,10 +275,42 @@ def _call_llm(messages: List[dict]) -> Optional[str]:
         return None
 
 
+_VALID_ACTION_TYPES = {
+    "view_logs", "view_metrics", "list_resources", "run_cli",
+    "view_billing", "lookup_threat_intel", "apply_fix",
+    "write_terraform", "verify", "escalate",
+}
+
+
+def _sanitize_action(action: dict) -> dict:
+    """Ensure action has a valid action_type and all parameter values are strings.
+
+    LLMs sometimes:
+    - Use an invalid action_type variant (e.g. 'view_log' instead of 'view_logs')
+    - Include integer/boolean values in parameters (port numbers, abuse scores)
+      which would cause a Pydantic 422 on Dict[str, str] validation.
+    """
+    if action.get("action_type") not in _VALID_ACTION_TYPES:
+        log.warning(
+            "Invalid action_type %r — falling back to view_logs",
+            action.get("action_type"),
+        )
+        return {"action_type": "view_logs", "target": action.get("target", "")}
+
+    # Coerce all parameter values to strings to prevent 422 errors
+    params = action.get("parameters")
+    if isinstance(params, dict):
+        action["parameters"] = {str(k): str(v) for k, v in params.items()}
+    elif params is not None:
+        action["parameters"] = {}
+
+    return action
+
+
 def _parse_action(raw: Optional[str]) -> dict:
-    """Parse LLM output into a valid action dict. Falls back to view_logs."""
+    """Parse LLM output into a valid, sanitized action dict. Falls back to view_logs."""
     if not raw:
-        return {"action_type": "view_logs", "target": "payment_service"}
+        return {"action_type": "view_logs", "target": ""}
     raw = raw.strip()
     # Strip markdown code fences if present
     if raw.startswith("```"):
@@ -282,7 +319,7 @@ def _parse_action(raw: Optional[str]) -> dict:
     try:
         action = json.loads(raw)
         if "action_type" in action:
-            return action
+            return _sanitize_action(action)
     except json.JSONDecodeError:
         pass
     # Try to extract JSON from embedded text
@@ -290,7 +327,9 @@ def _parse_action(raw: Optional[str]) -> dict:
     end   = raw.rfind("}")
     if start != -1 and end != -1:
         try:
-            return json.loads(raw[start:end + 1])
+            action = json.loads(raw[start:end + 1])
+            if "action_type" in action:
+                return _sanitize_action(action)
         except json.JSONDecodeError:
             pass
     return {"action_type": "view_logs", "target": ""}
@@ -382,18 +421,50 @@ def run_episode(task: str) -> dict:
     })
 
     # ── Main loop ────────────────────────────────────────────────────────
+    _consecutive_errors = 0
     while not done and steps < max_steps:
         # LLM decision
         raw_action = _call_llm(messages)
         action     = _parse_action(raw_action)
 
-        # Step the environment
+        # Step the environment — handle HTTP 422 (invalid action) gracefully
+        # by retrying with a safe investigation action rather than aborting.
         try:
             step_resp = _step(session_id, action)
+            _consecutive_errors = 0
         except Exception as exc:
-            error_msg = str(exc)
-            log.error("Step %d failed: %s", steps + 1, exc)
-            break
+            error_str = str(exc)
+            # 422 = Pydantic validation error on the server — the LLM produced
+            # a structurally invalid action (e.g. integer parameter values).
+            # Retry once with a sanitized view_logs fallback rather than killing
+            # the whole episode.
+            if "422" in error_str or "Unprocessable" in error_str:
+                log.warning(
+                    "Step %d: 422 Unprocessable Entity — retrying with safe fallback action",
+                    steps + 1,
+                )
+                fallback = {"action_type": "view_logs", "target": ""}
+                try:
+                    step_resp = _step(session_id, fallback)
+                    action = fallback
+                    error_msg = f"422_recovered:{error_str[:80]}"
+                    _consecutive_errors = 0
+                except Exception as exc2:
+                    error_msg = str(exc2)
+                    log.error("Step %d fallback also failed: %s", steps + 1, exc2)
+                    _consecutive_errors += 1
+                    if _consecutive_errors >= 3:
+                        log.error("3 consecutive errors — aborting episode")
+                        break
+                    continue
+            else:
+                error_msg = error_str
+                log.error("Step %d failed: %s", steps + 1, exc)
+                _consecutive_errors += 1
+                if _consecutive_errors >= 3:
+                    log.error("3 consecutive errors — aborting episode")
+                    break
+                continue
 
         obs    = step_resp.get("observation", step_resp)
         reward = float(obs.get("reward", 0.0))

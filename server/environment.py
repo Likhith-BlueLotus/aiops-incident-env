@@ -2548,15 +2548,16 @@ class IncidentResponseEnvironment(Environment):
             "r.wong. All 8 accounts must be treated as compromised."
         ),
         "active_c2_beacon": (
-            "EVIDENCE: Multiple PROD hosts have persistent TLS connections to "
-            "50.16.16.211:443 (QakBot C2, ONLINE per Feodo Tracker, beacon 6h+). "
+            "EVIDENCE: PROD-SRV-12 has a persistent TLS beacon to 50.16.16.211:443 "
+            "(QakBot C2, ONLINE per Feodo Tracker, interval 6h+). "
             "GuardDuty finding: UnauthorizedAccess:IAMUser/TorIPCaller. "
-            "Affected hosts: PROD-SRV-03, PROD-SRV-07, PROD-SRV-09, DB-PRIMARY."
+            "Isolate PROD-SRV-12 AND block 50.16.16.211 at the network ACL."
         ),
         "lateral_movement": (
-            "EVIDENCE: WMI/SMB lateral movement detected from PROD-SRV-03 to "
+            "EVIDENCE: WMI/SMB lateral movement detected from PROD-SRV-12 to "
             "PROD-SRV-07, PROD-SRV-09, and DB-PRIMARY (MITRE T1021). "
-            "All 4 hosts are compromised and must be isolated from the network "
+            "All 4 hosts (PROD-SRV-12, PROD-SRV-07, PROD-SRV-09, DB-PRIMARY) "
+            "are compromised and must be isolated from the network "
             "to prevent further propagation."
         ),
         "s3_data_exfiltration": (
