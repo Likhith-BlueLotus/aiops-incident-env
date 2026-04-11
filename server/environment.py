@@ -2308,6 +2308,35 @@ class IncidentResponseEnvironment(Environment):
     # ── Action handlers ───────────────────────────────────────────────────
 
     def _handle_view_logs(self, target: str) -> Tuple[str, float]:
+        # Empty target: return actionable status to break any no-op loop
+        if not target:
+            degraded = [
+                s for s, d in self._services.items()
+                if d.get("status") != "healthy"
+            ]
+            revealed = [
+                rc for rc in self._scenario.get("root_causes", [])
+                if rc in self._clues_revealed
+            ]
+            unrevealed = [
+                rc for rc in self._scenario.get("root_causes", [])
+                if rc not in self._clues_revealed
+            ]
+            parts = ["⚠ No service specified — view_logs requires a target."]
+            if degraded:
+                parts.append(f"Degraded services to investigate: {', '.join(degraded)}")
+            if revealed:
+                parts.append(
+                    f"You have evidence for: {', '.join(revealed)}. "
+                    "Apply the fix now using apply_fix."
+                )
+            if unrevealed:
+                parts.append(
+                    f"Still unidentified: {len(unrevealed)} root cause(s). "
+                    f"Investigate: {', '.join(degraded[:3]) or 'remaining services'}."
+                )
+            return "\n".join(parts), 0.0
+
         svc = self._find_service(target)
         if svc is None:
             return self._unknown_target(target), 0.0
